@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Community Real Estate | Map View</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f4f7f5;--panel:#fff;--ink:#17352b;--muted:#6d7d75;--green:#1f6b50;--line:#e2eae5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Inter,Arial,sans-serif;color:var(--ink)}
+header{background:#153f31;color:#fff;padding:22px 5%;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-size:22px;margin:0 0 5px}header p{margin:0;color:#d2e4da;font-size:13px}
+.tag{font-size:12px;background:#e9f4ed;color:#1f6b50;padding:8px 12px;border-radius:20px;font-weight:700}
+main{max-width:1250px;margin:24px auto;padding:0 18px}
+.notice{background:#fff8e7;border:1px solid #f1dfae;color:#71551b;border-radius:12px;padding:12px 15px;font-size:13px;line-height:1.5;margin-bottom:16px}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}
+.filter{border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 14px;border-radius:22px;cursor:pointer;font-weight:600}
+.filter.active{background:var(--green);border-color:var(--green);color:#fff}
+.layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,.8fr);gap:16px}
+#map{height:590px;border-radius:16px;border:1px solid var(--line);z-index:1}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;min-height:300px}
+.panel h2{font-size:18px;margin:0 0 5px}.sub{color:var(--muted);font-size:13px;margin:0 0 18px}
+.summary{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+.metric{background:#f3f8f5;padding:12px;border-radius:11px}.metric strong{display:block;font-size:20px;color:var(--green)}.metric span{font-size:11px;color:var(--muted)}
+#details{border-top:1px solid var(--line);padding-top:15px}.empty{color:var(--muted);font-size:14px;line-height:1.6;background:#f7faf8;padding:14px;border-radius:10px}
+.detail-title{font-size:17px;font-weight:750;margin-bottom:10px}.detail-row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #edf1ee;font-size:13px}.detail-row span:first-child{color:var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:13px;color:var(--muted);font-size:12px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.leaflet-popup-content{font-family:Arial,sans-serif;line-height:1.5}.leaflet-popup-content b{color:#17352b}
+@media(max-width:800px){.layout{grid-template-columns:1fr}#map{height:440px}.panel{min-height:260px}}
+</style>
+</head>
+<body>
+<header><div><h1>Community Real Estate — Map View</h1><p>Explore properties by category and compare their community details.</p></div><span class="tag">Prototype Map</span></header>
+<main>
+<div class="notice"><b>Demo location notice:</b> These pins use illustrative coordinates around Bengaluru for demonstration only. They are not verified property addresses. Replace them with real coordinates before presenting the map as actual listing locations.</div>
+<div class="toolbar" id="filters">
+<button class="filter active" data-filter="All">All properties</button>
+<button class="filter" data-filter="Student">Student / PG</button>
+<button class="filter" data-filter="Residential">Residential</button>
+<button class="filter" data-filter="Commercial">Commercial</button>
+</div>
+<div class="layout">
+<section><div id="map"></div><div class="legend">
+<span><i class="dot" style="background:#27865d"></i>Student / PG</span>
+<span><i class="dot" style="background:#3977c5"></i>Residential</span>
+<span><i class="dot" style="background:#d58a28"></i>Commercial</span>
+</div></section>
+<aside class="panel">
+<h2>Property overview</h2><p class="sub">Select any map pin to view its details.</p>
+<div class="summary">
+<div class="metric"><strong id="total">10</strong><span>Sample properties</span></div>
+<div class="metric"><strong>3</strong><span>Categories</span></div>
+</div>
+<div id="details"><div class="empty">Choose a marker on the map. You will see the property name, category, monthly rent, distance, amenities and community score here.</div></div>
+</aside>
+</div>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const properties=[
+{name:"Green Nest PG",category:"Student",rent:8500,distance:1.2,amenities:"Food, WiFi, CCTV",transport:"Yes",community:85,lat:12.9716,lng:77.5946},
+{name:"City Comfort PG",category:"Student",rent:7000,distance:3.5,amenities:"WiFi, CCTV",transport:"Yes",community:75,lat:12.9792,lng:77.6033},
+{name:"Student Home PG",category:"Student",rent:8800,distance:.8,amenities:"Food, WiFi, CCTV",transport:"Yes",community:90,lat:12.9668,lng:77.6071},
+{name:"Sunrise PG",category:"Student",rent:8000,distance:2.0,amenities:"Food, CCTV",transport:"No",community:80,lat:12.9564,lng:77.6012},
+{name:"Campus Stay PG",category:"Student",rent:9000,distance:1.5,amenities:"Food, WiFi",transport:"Yes",community:88,lat:12.9841,lng:77.5708},
+{name:"Green Valley Apartment",category:"Residential",rent:15000,distance:2.5,amenities:"Parking, WiFi, Security",transport:"Yes",community:82,lat:12.9457,lng:77.5742},
+{name:"Urban Living Flat",category:"Residential",rent:18000,distance:1.8,amenities:"Lift, Parking, Security",transport:"Yes",community:87,lat:12.9352,lng:77.6101},
+{name:"City Business Hub",category:"Commercial",rent:25000,distance:4.0,amenities:"Parking, Security",transport:"Yes",community:78,lat:12.9903,lng:77.6172},
+{name:"Metro Office Space",category:"Commercial",rent:35000,distance:1.5,amenities:"Parking, WiFi, Security",transport:"Yes",community:86,lat:12.9758,lng:77.5551},
+{name:"Family Comfort Home",category:"Residential",rent:22000,distance:3.0,amenities:"Parking, Security, Lift",transport:"Yes",community:91,lat:12.9278,lng:77.5831}
+];
+const colors={Student:"#27865d",Residential:"#3977c5",Commercial:"#d58a28"};
+const map=L.map('map').setView([12.9716,77.5946],12);
+L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    {
+        subdomains: 'abcd',
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    }
+).addTo(map);
+let markers=[];
+function showDetails(p){
+document.getElementById('details').innerHTML=`<div class="detail-title">${p.name}</div>
+<div class="detail-row"><span>Category</span><b>${p.category}</b></div>
+<div class="detail-row"><span>Monthly rent</span><b>₹${p.rent.toLocaleString('en-IN')}</b></div>
+<div class="detail-row"><span>Distance</span><b>${p.distance} km</b></div>
+<div class="detail-row"><span>Amenities</span><b>${p.amenities}</b></div>
+<div class="detail-row"><span>Public transport</span><b>${p.transport}</b></div>
+<div class="detail-row"><span>Community score</span><b>${p.community}/100</b></div>
+<p style="font-size:11px;color:#9a6b20;margin-top:13px">Illustrative demo pin — location is not verified.</p>`;
+}
+function render(filter='All'){
+markers.forEach(m=>map.removeLayer(m));markers=[];
+const visible=properties.filter(p=>filter==='All'||p.category===filter);
+visible.forEach(p=>{
+const marker=L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:2,fillColor:colors[p.category],fillOpacity:1}).addTo(map);
+marker.bindPopup(`<b>${p.name}</b><br>${p.category}<br>₹${p.rent.toLocaleString('en-IN')} / month<br><small>Illustrative demo location</small>`);
+marker.on('click',()=>showDetails(p));markers.push(marker);
+});
+document.getElementById('total').textContent=visible.length;
+}
+document.querySelectorAll('.filter').forEach(btn=>btn.addEventListener('click',()=>{
+document.querySelectorAll('.filter').forEach(b=>b.classList.remove('active'));btn.classList.add('active');render(btn.dataset.filter);
+}));
+render();
+</script>
+</body>
+</html>

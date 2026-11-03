@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Community Real Estate Analytics</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f7f5;color:#20332b}
+header{background:#174d38;color:#fff;padding:28px 5%;box-shadow:0 3px 12px #0002}
+header h1{margin:0 0 8px;font-size:28px}header p{margin:0;color:#dcebe2}
+main{max-width:1200px;margin:28px auto;padding:0 18px}
+section{background:#fff;border-radius:12px;padding:22px;margin-bottom:24px;box-shadow:0 3px 14px #163b2b12}
+h2{margin:0 0 16px;color:#174d38}h3{color:#315544}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;background:transparent;padding:0;box-shadow:none}
+.card{background:#fff;border-left:5px solid #27865d;border-radius:10px;padding:18px;box-shadow:0 3px 14px #163b2b12}
+.card h3{margin:0 0 12px;font-size:15px;color:#53645b}.card p{margin:0;font-size:30px;font-weight:bold}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:20px}
+.chart-card{min-width:0}.chart-wrap{height:290px;position:relative}
+.property-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:18px 0}
+.property-option{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid #dce7e0;border-radius:8px;background:#fbfdfb}
+.property-option input{accent-color:#27865d;width:17px;height:17px}
+button{background:#174d38;color:#fff;border:0;border-radius:7px;padding:12px 20px;font-size:15px;cursor:pointer}
+button:hover{background:#216849}
+#comparisonMessage{font-weight:bold;margin:16px 0 10px}
+.table-container{overflow-x:auto;margin-top:12px}.comparison-table{width:100%;border-collapse:collapse;min-width:600px}
+.comparison-table th,.comparison-table td{border:1px solid #dce7e0;padding:12px;text-align:left;vertical-align:top}
+.comparison-table thead th{background:#174d38;color:#fff}.comparison-table tbody th{background:#edf5ef}
+.status-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.status-item{padding:14px;border-radius:8px;background:#f4f8f5;border:1px solid #dce7e0}
+.status-item strong{display:block;font-size:23px;margin-bottom:5px;color:#174d38}
+.note{color:#68786f;font-size:13px;line-height:1.5}
+@media(max-width:600px){header h1{font-size:22px}section{padding:16px}.card p{font-size:25px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<header>
+<h1>Community Real Estate Analytics</h1>
+<p>Property insights, suitability, affordability and trust overview</p>
+</header>
+<main>
+<section class="stats">
+<div class="card"><h3>Total Properties</h3><p id="totalCount">10</p></div>
+<div class="card"><h3>Student Properties</h3><p id="studentCount">5</p></div>
+<div class="card"><h3>Residential Properties</h3><p id="residentialCount">3</p></div>
+<div class="card"><h3>Commercial Properties</h3><p id="commercialCount">2</p></div>
+</section>
+
+<section>
+<h2>Property Category Analytics</h2>
+<div class="charts">
+<div class="chart-card"><h3>Properties by Category</h3><div class="chart-wrap"><canvas id="categoryChart"></canvas></div></div>
+<div class="chart-card"><h3>Category Distribution</h3><div class="chart-wrap"><canvas id="categoryPieChart"></canvas></div></div>
+</div>
+</section>
+
+<section>
+<h2>Suitability Score Analysis</h2>
+<p class="note">Scores are shown only for properties with available test results. The remaining sample properties have not yet been scored.</p>
+<div class="chart-wrap"><canvas id="suitabilityChart"></canvas></div>
+</section>
+
+<section>
+<h2>Community Score Analysis</h2>
+<p class="note">Community scores represent the sample dataset's community-related score, out of 100.</p>
+<div class="chart-wrap"><canvas id="communityChart"></canvas></div>
+</section>
+
+<section>
+<h2>Monthly Rent Analysis</h2>
+<p class="note">Monthly rents are shown in Indian rupees (₹).</p>
+<div class="chart-wrap"><canvas id="rentChart"></canvas></div>
+</section>
+
+<section>
+<h2>Trust and Verification Analysis</h2>
+<div class="charts">
+<div class="chart-card"><h3>Verification Status</h3><div class="chart-wrap"><canvas id="verificationChart"></canvas></div></div>
+<div class="chart-card">
+<h3>Verification Summary</h3>
+<div id="verificationSummary" class="status-summary"></div>
+<p class="note">All sample listings are currently marked Pending. This is sample project data, not independently verified property information.</p>
+</div>
+</div>
+</section>
+
+<section>
+<h2>Compare Properties</h2>
+<p>Select at least two properties to compare their features.</p>
+<div id="propertySelection" class="property-list"></div>
+<button type="button" id="compareBtn">Compare Selected Properties</button>
+<p id="comparisonMessage" role="status" aria-live="polite"></p>
+<div id="comparisonResult"></div>
+</section>
+<p class="note">This dashboard displays 10 sample listings from the project's dataset. Suitability scores are available for only three tested properties. The recommendation system is rule-based and explainable; these charts do not represent a trained machine-learning model.</p>
+</main>
+
+<script>
+(function(){
+"use strict";
+const properties=[
+{id:1,name:"Green Nest PG",category:"Student",rent:8500,distance:1.2,amenities:"Food, WiFi, CCTV",transport:"Yes",community:85,suitability:74.50,status:"Pending"},
+{id:2,name:"City Comfort PG",category:"Student",rent:7000,distance:3.5,amenities:"WiFi, CCTV",transport:"Yes",community:75,suitability:null,status:"Pending"},
+{id:3,name:"Student Home PG",category:"Student",rent:8800,distance:0.8,amenities:"Food, WiFi, CCTV",transport:"Yes",community:90,suitability:77.00,status:"Pending"},
+{id:4,name:"Sunrise PG",category:"Student",rent:8000,distance:2.0,amenities:"Food, CCTV",transport:"No",community:80,suitability:null,status:"Pending"},
+{id:5,name:"Campus Stay PG",category:"Student",rent:9000,distance:1.5,amenities:"Food, WiFi",transport:"Yes",community:88,suitability:68.05,status:"Pending"},
+{id:6,name:"Green Valley Apartment",category:"Residential",rent:15000,distance:2.5,amenities:"Parking, WiFi, Security",transport:"Yes",community:82,suitability:null,status:"Pending"},
+{id:7,name:"Urban Living Flat",category:"Residential",rent:18000,distance:1.8,amenities:"Lift, Parking, Security",transport:"Yes",community:87,suitability:null,status:"Pending"},
+{id:8,name:"City Business Hub",category:"Commercial",rent:25000,distance:4.0,amenities:"Parking, Security",transport:"Yes",community:78,suitability:null,status:"Pending"},
+{id:9,name:"Metro Office Space",category:"Commercial",rent:35000,distance:1.5,amenities:"Parking, WiFi, Security",transport:"Yes",community:86,suitability:null,status:"Pending"},
+{id:10,name:"Family Comfort Home",category:"Residential",rent:22000,distance:3.0,amenities:"Parking, Security, Lift",transport:"Yes",community:91,suitability:null,status:"Pending"}
+];
+const categories=["Student","Residential","Commercial"];
+const counts=categories.map(c=>properties.filter(p=>p.category===c).length);
+document.getElementById("totalCount").textContent=properties.length;
+document.getElementById("studentCount").textContent=counts[0];
+document.getElementById("residentialCount").textContent=counts[1];
+document.getElementById("commercialCount").textContent=counts[2];
+
+const selection=document.getElementById("propertySelection");
+properties.forEach(p=>{
+ const label=document.createElement("label");label.className="property-option";
+ const cb=document.createElement("input");cb.type="checkbox";cb.className="property-check";cb.value=String(p.id);
+ label.appendChild(cb);label.appendChild(document.createTextNode(p.name));selection.appendChild(label);
+});
+document.getElementById("compareBtn").addEventListener("click",()=>{
+ const ids=Array.from(document.querySelectorAll(".property-check:checked")).map(x=>Number(x.value));
+ const msg=document.getElementById("comparisonMessage"),out=document.getElementById("comparisonResult");
+ out.innerHTML="";
+ if(ids.length<2){msg.textContent="Please select at least two properties.";msg.style.color="#b42318";return;}
+ const chosen=properties.filter(p=>ids.includes(p.id));
+ const rows=[
+ ["Category",p=>p.category],["Monthly Rent",p=>"₹"+p.rent.toLocaleString("en-IN")],
+ ["Distance",p=>p.distance+" km"],["Amenities",p=>p.amenities],
+ ["Public Transport",p=>p.transport],["Community Score",p=>p.community+"/100"],
+ ["Suitability Score",p=>p.suitability===null?"Not calculated":p.suitability.toFixed(2)+"%"],
+ ["Verification Status",p=>p.status]
+ ];
+ let table='<div class="table-container"><table class="comparison-table"><thead><tr><th>Feature</th>';
+ chosen.forEach(p=>table+="<th>"+p.name+"</th>");
+ table+="</tr></thead><tbody>";
+ rows.forEach(row=>{table+="<tr><th>"+row[0]+"</th>";chosen.forEach(p=>table+="<td>"+row[1](p)+"</td>");table+="</tr>";});
+ table+="</tbody></table></div>";out.innerHTML=table;
+ msg.textContent="Comparison results for "+chosen.length+" properties:";msg.style.color="#174d38";
+});
+
+if(window.Chart){
+ const common={responsive:true,maintainAspectRatio:false};
+ new Chart(document.getElementById("categoryChart"),{type:"bar",data:{labels:categories,datasets:[{label:"Number of Properties",data:counts,backgroundColor:["#27865D","#E5A13B","#4786C6"],borderRadius:7}]},options:{...common,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+ new Chart(document.getElementById("categoryPieChart"),{type:"pie",data:{labels:categories,datasets:[{data:counts,backgroundColor:["#27865D","#E5A13B","#4786C6"]}]},options:{...common,plugins:{legend:{position:"bottom"}}}});
+ const scored=properties.filter(p=>p.suitability!==null);
+ new Chart(document.getElementById("suitabilityChart"),{type:"bar",data:{labels:scored.map(p=>p.name),datasets:[{label:"Suitability Score (%)",data:scored.map(p=>p.suitability),backgroundColor:"#27865D",borderRadius:6}]},options:{...common,indexAxis:"y",scales:{x:{beginAtZero:true,max:100}}}});
+ new Chart(document.getElementById("communityChart"),{type:"bar",data:{labels:properties.map(p=>p.name),datasets:[{label:"Community Score",data:properties.map(p=>p.community),backgroundColor:"#4786C6",borderRadius:5}]},options:{...common,indexAxis:"y",scales:{x:{beginAtZero:true,max:100}}}});
+ new Chart(document.getElementById("rentChart"),{type:"bar",data:{labels:properties.map(p=>p.name),datasets:[{label:"Monthly Rent (₹)",data:properties.map(p=>p.rent),backgroundColor:"#E5A13B",borderRadius:5}]},options:{...common,indexAxis:"y",scales:{x:{beginAtZero:true,ticks:{callback:v=>"₹"+Number(v).toLocaleString("en-IN")}}}}});
+}
+const verified=properties.filter(p=>p.status==="Verified").length;
+const pending=properties.filter(p=>p.status==="Pending").length;
+const unverified=properties.filter(p=>p.status==="Unverified").length;
+document.getElementById("verificationSummary").innerHTML=
+'<div class="status-item"><strong>'+verified+'</strong>Verified</div>'+
+'<div class="status-item"><strong>'+pending+'</strong>Pending</div>'+
+'<div class="status-item"><strong>'+unverified+'</strong>Unverified</div>';
+if(window.Chart){
+ new Chart(document.getElementById("verificationChart"),{type:"doughnut",data:{labels:["Verified","Pending","Unverified"],datasets:[{data:[verified,pending,unverified],backgroundColor:["#27865D","#E5A13B","#D9534F"]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}});
+}
+})();
+</script>
+</body>
+</html>
